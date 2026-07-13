@@ -1,6 +1,7 @@
 {
   "prefix": "!",
   "mode": "public",
-  "menuImage": "https://i.ibb.co/example/image.jpg",
+  "botName": "FluxTroid Bot",
+  "menuImage": "",
   "ownerNumber": "947XXXXXXXX@s.whatsapp.net"
 }

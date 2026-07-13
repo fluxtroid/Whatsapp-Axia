@@ -16,11 +16,11 @@
 **WhatsApp Axia** is a professionally structured WhatsApp Bot boilerplate built using Node.js and the [`@whiskeysockets/baileys`](https://github.com/WhiskeySockets/Baileys) library. It is designed to be extremely lightweight and developer-friendly, featuring a dynamic plugin system that allows you to add new commands without touching the core code.
 
 ## Features
-- 🔑 Pairing Code Login:** No need to scan QR codes! Log in directly using your WhatsApp phone number.
-- 🧩 Dynamic Command Handler:** Drop a new `.js` file into the `commands` folder, and it automatically becomes a bot command.
-- ⚙️ In-Chat Configuration:** Change bot name, prefix, and public/private modes directly via WhatsApp commands (No need to restart).
-- 📝 Auto-Generated Menu:** The `!menu` command automatically updates itself based on your loaded plugins.
-- 🛡️ Public & Private Modes:** Restrict bot usage to just the owner or open it up to everyone.
+- 🔑 **Pairing Code Login:** No need to scan QR codes! Log in directly using your WhatsApp phone number.
+- 🧩 **Dynamic Command Handler:** Drop a new `.js` file into the `commands` folder, and it automatically becomes a bot command.
+- ⚙️ **In-Chat Configuration:** Change bot name, prefix, and public/private modes directly via WhatsApp commands (No need to restart).
+- 📝 **Auto-Generated Menu:** The `!menu` command automatically updates itself based on your loaded plugins.
+- 🛡️ **Public & Private Modes:** Restrict bot usage to just the owner or open it up to everyone.
 
 ---
 

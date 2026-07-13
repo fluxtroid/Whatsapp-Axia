@@ -1,0 +1,29 @@
+{
+  "name": "whatsapp-axia",
+  "version": "1.0.0",
+  "description": "A simple, fast, and highly customizable WhatsApp Bot Boilerplate using Baileys",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "nodejs",
+    "automation",
+    "whatsapp-bot",
+    "fluxtroid"
+  ],
+  "author": "FluxTroid",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "pino": "^8.0.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}

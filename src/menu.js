@@ -4,7 +4,7 @@ module.exports = {
     desc: 'සියලුම Command ලබා ගැනීම',
     execute: async (sock, msg, args, commands, config) => {
         
-        let menuText = `╭━━━〔 *FluxTroid Bot* 〕━━━⬣\n`;
+        let menuText = `╭━━━〔 *Whatsapp Axia* 〕━━━⬣\n`;
         menuText += `┃ 👨‍💻 *Owner:* FluxTroid\n`;
         menuText += `┃ 🚀 *Mode:* ${config.mode.toUpperCase()}\n`;
         menuText += `┃  Prefix: [ *${config.prefix}* ]\n`;

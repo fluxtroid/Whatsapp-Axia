@@ -1,25 +1,42 @@
 const { makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
 const pino = require('pino');
+const readline = require('readline');
+
+// Terminal එකෙන් දුරකථන අංකය ලබා ගැනීමට readline සකස් කිරීම
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 async function startBot() {
-    // Session data සුරක්ෂිතව තබා ගැනීම සඳහා
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
-    // Socket connection එක සෑදීම
+    // Socket connection එක සෑදීම (QR පෙන්වීම නවතා ඇත)
     const sock = makeWASocket({
-        printQRInTerminal: true, // QR කේතය terminal එකේ පෙන්වීම
         auth: state,
-        logger: pino({ level: 'silent' }) // අනවශ්‍ය logs පෙන්වීම නැවැත්වීම
+        logger: pino({ level: 'silent' }),
+        printQRInTerminal: false, // QR කේතය අවශ්‍ය නොවේ
+        browser: ['FluxTroid Bot', 'Chrome', '1.0.0'] // Linked devices වල පෙන්වන නම
     });
 
-    // Connection එකේ වෙනස්කම් හඳුනා ගැනීම (QR scan කිරීම, Disconnect වීම)
+    // පරිශීලකයා කලින් ලොග් වී නොමැති නම් Pairing Code එකක් ඉල්ලීම
+    if (!sock.authState.creds.registered) {
+        setTimeout(async () => {
+            const phoneNumber = await question('කරුණාකර ඔබේ WhatsApp අංකය ඇතුළත් කරන්න (උදා - 947XXXXXXXX): ');
+            // දුරකථන අංකයේ ඇති හිස්තැන් හෝ + ලකුණු ඉවත් කිරීම
+            const cleanNumber = phoneNumber.replace(/[^0-9]/g, ''); 
+            
+            const code = await sock.requestPairingCode(cleanNumber);
+            console.log(`\n🔑 ඔබේ Pairing Code එක: ${code}\n`);
+            console.log('WhatsApp ඇප් එකට ගොස් Linked Devices -> Link with phone number යටතේ මෙම කේතය ඇතුළත් කරන්න.');
+        }, 3000); // Socket එක නිසි ලෙස ආරම්භ වීමට කුඩා වේලාවක් ලබා දීම
+    }
+
+    // Connection එකේ වෙනස්කම් හඳුනා ගැනීම
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
         
         if (connection === 'close') {
             console.log('Connection closed. Reconnecting...');
-            startBot(); // Disconnect වුවහොත් නැවත සම්බන්ධ වීම
+            startBot();
         } else if (connection === 'open') {
             console.log('✅ Bot Connected Successfully!');
         }
@@ -31,11 +48,8 @@ async function startBot() {
     // අලුත් පණිවිඩයක් පැමිණි විට
     sock.ev.on('messages.upsert', async (m) => {
         const msg = m.messages[0];
-        
-        // පණිවිඩය හිස් නම් හෝ එය bot විසින්ම යැවූවක් නම් අතහැර දැමීම
         if (!msg.message || msg.key.fromMe) return;
 
-        // පණිවිඩයේ අන්තර්ගතය ලබා ගැනීම
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
         
         if (text === '!ping') {

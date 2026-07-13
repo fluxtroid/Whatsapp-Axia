@@ -1,39 +1,53 @@
 const { makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 
-// Terminal එකෙන් දුරකථන අංකය ලබා ගැනීමට readline සකස් කිරීම
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
+const commands = new Map();
+
+const loadCommands = () => {
+    const cmdPath = path.join(__dirname, 'commands');
+    const files = fs.readdirSync(cmdPath).filter(file => file.endsWith('.js'));
+    for (const file of files) {
+        const cmd = require(`./commands/${file}`);
+        if (cmd.name) {
+            commands.set(cmd.name, cmd);
+        }
+    }
+};
+
+// config.json ගොනුව කියවීම සඳහා function එකක්
+const getConfig = () => {
+    const configPath = path.join(__dirname, 'config.json');
+    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+};
+
 async function startBot() {
+    loadCommands();
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
-    // Socket connection එක සෑදීම (QR පෙන්වීම නවතා ඇත)
     const sock = makeWASocket({
         auth: state,
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: false, // QR කේතය අවශ්‍ය නොවේ
-        browser: ['FluxTroid Bot', 'Chrome', '1.0.0'] // Linked devices වල පෙන්වන නම
+        printQRInTerminal: false,
+        browser: ['FluxTroid Bot', 'Chrome', '1.0.0']
     });
 
-    // පරිශීලකයා කලින් ලොග් වී නොමැති නම් Pairing Code එකක් ඉල්ලීම
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
-            const phoneNumber = await question('කරුණාකර ඔබේ WhatsApp අංකය ඇතුළත් කරන්න (උදා - 947XXXXXXXX): ');
-            // දුරකථන අංකයේ ඇති හිස්තැන් හෝ + ලකුණු ඉවත් කිරීම
+            const phoneNumber = await question('කරුණාකර ඔබේ WhatsApp අංකය ඇතුළත් කරන්න: ');
             const cleanNumber = phoneNumber.replace(/[^0-9]/g, ''); 
-            
             const code = await sock.requestPairingCode(cleanNumber);
             console.log(`\n🔑 ඔබේ Pairing Code එක: ${code}\n`);
-            console.log('WhatsApp ඇප් එකට ගොස් Linked Devices -> Link with phone number යටතේ මෙම කේතය ඇතුළත් කරන්න.');
-        }, 3000); // Socket එක නිසි ලෙස ආරම්භ වීමට කුඩා වේලාවක් ලබා දීම
+        }, 3000);
     }
 
-    // Connection එකේ වෙනස්කම් හඳුනා ගැනීම
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
-        
+        const { connection } = update;
         if (connection === 'close') {
             console.log('Connection closed. Reconnecting...');
             startBot();
@@ -42,18 +56,36 @@ async function startBot() {
         }
     });
 
-    // Session credentials අලුත් වන විට එය save කිරීම
     sock.ev.on('creds.update', saveCreds);
 
-    // අලුත් පණිවිඩයක් පැමිණි විට
     sock.ev.on('messages.upsert', async (m) => {
         const msg = m.messages[0];
         if (!msg.message || msg.key.fromMe) return;
 
+        const config = getConfig(); // පණිවිඩයක් ආවම නවතම සැකසුම් ලබාගැනීම
+        const sender = msg.key.remoteJid;
+        const isOwner = sender === config.ownerNumber;
+
+        // Private mode එකේදී අයිතිකරුට හැර අන් අයට වැඩ නොකිරීම
+        if (config.mode === 'private' && !isOwner) {
+            return;
+        }
+
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+        const prefix = config.prefix;
         
-        if (text === '!ping') {
-            await sock.sendMessage(msg.key.remoteJid, { text: 'Pong! 🏓 Bot is active.' });
+        if (!text || !text.startsWith(prefix)) return;
+
+        const args = text.slice(prefix.length).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+
+        if (commands.has(commandName)) {
+            try {
+                // Command එකට config එකත් යවනවා, එවිට ඇතුළතදී භාවිතා කළ හැක
+                await commands.get(commandName).execute(sock, msg, args, commands, config);
+            } catch (error) {
+                console.error(`Error executing ${commandName}:`, error);
+            }
         }
     });
 }
